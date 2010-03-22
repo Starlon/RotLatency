@@ -40,12 +40,13 @@ function RotLatency:OnInitialize()
     
 	self:RegisterChatCommand("rotlatency", "OpenConfig")
 
-    RotLatency.TT = CreateFrame("GameTooltip")
-    RotLatency.TT:SetOwner(UIParent, "ANCHOR_NONE")
-    RotLatency.obj = ldb:NewDataObject("RotLatency", {text = "RotLatency",})
-    RotLatency.obj.OnTooltipShow = RotLatency.OnTooltip
-    RotLatency.obj.OnClick = RotLatency.OnClick
+    self.TT = CreateFrame("GameTooltip")
+    self.TT:SetOwner(UIParent, "ANCHOR_NONE")
+    self.obj = ldb:NewDataObject("RotLatency", {text = "RotLatency",})
+    self.obj.OnTooltipShow = RotLatency.OnTooltip
+    self.obj.OnClick = RotLatency.OnClick
     
+    self:RegisterEvent("SPELL_UPDATE_COOLDOWN")
     self:RebuildOptions()
 end
 
@@ -78,9 +79,13 @@ function RotLatency:OnDisable()
     frame:SetScript("OnUpdate", nil)
 end
 
+function RotLatency:SPELL_UPDATE_COOLDOWN()
+
+end
+
 do
     local update = 0
-
+    
     function RotLatency.OnUpdate(_, elapsed)
         
         update = update + elapsed
@@ -98,16 +103,28 @@ do
                 
                 local count = #timers[name]
                 
-                if start ~= 0 and count > 0 and not timers[name][count].active then
+                local timer = timers[name][count]
+                
+                if start ~= 0 and count > 0 and not timer.active then
                     if count == 1 then
                         timers[name][1].finish = start
                     end
                     timers[name][count + 1] = {}
                     timers[name][count + 1].active = true
                     timers[name][count + 1].start = start
-                elseif start == 0 and count > 0 and timers[name][count].active then
-                    timers[name][count].active = false
-                    timers[name][count].finish = GetTime()
+                    
+                    if dur == 1.5 then
+                        timers[name][count + 1].gcd = true
+                    end
+                    
+                elseif start == 0 and count > 0 and timer.active and spell.gcd and timer.gcd then
+                    timer.active = false
+                    timer.finish = GetTime()
+                elseif start == 0 and count > 0 and timer.active and not spell.gcd then
+                    timer.active = false
+                    timer.finish = GetTime()
+                elseif start == 0 and count > 0 and timer.active and timer.gcd then
+                    timers[name][count] = nil
                 end
             end
         end
@@ -169,7 +186,7 @@ function RotLatency:RebuildOptions()
                 for i = 1, 500, 1 do
                     local name = GetSpellName(i, book)
                     if name == v then
-                        self.db.profile.spells[book][name] = {name = "Spell " .. v, id = i}
+                        self.db.profile.spells[book][name] = {name = "Spell " .. v, id = i, gcd=false}
                         self:RebuildOptions()
                     end
                 end
@@ -197,13 +214,30 @@ function RotLatency:RebuildOptions()
                 name = spell.name,
                 type = "group",
                 args = {
+                    gcd = {
+                        name = "Track GCD",
+                        type = "toggle",
+                        set = function(info, v) 
+                            self.db.profile.spells[book][key].gcd = v
+                        end,
+                        get = function()
+                            return spell.gcd
+                        end,
+                        order = 1
+                    },
+                    space = {
+                        name = "",
+                        type = "header",
+                        order = 2
+                    },
                     delete = {
                         name = "Delete " .. spell.name,
                         type = "execute",
                         func = function() 
                             self.db.profile.spells[book][key] = nil
                             self:RebuildOptions()
-                        end
+                        end,
+                        order = 3
                     }
                 }
             }
