@@ -1,0 +1,7 @@
+## Interface: 30300
+## Author: Starlon
+## Title: RotLatency
+## OptionalDeps: Ace3
+## SavedVariables: RotLatencyDB
+
+code.lua
