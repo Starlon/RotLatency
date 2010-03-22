@@ -19,16 +19,16 @@ function RotLatency:OnInitialize()
 	
 	self.db:RegisterDefaults({
 		profile = {
-            actionbars = {}
+            spells = { [BOOKTYPE_SPELL] = { }, [BOOKTYPE_PET] = { }, }
 		}
 	})
         	
 	self.options = {
 		type = "group",
 		args = {
-			actionbars = {
+			spells = {
                 type = "group",
-                name = "Action Bars",
+                name = "Spells to Track",
                 args = {}
             }
 		}
@@ -50,10 +50,10 @@ end
 
 function RotLatency:ResetTimers() 
     timers = {}
-    for actionbarkey, actionbar in pairs(self.db.profile.actionbars) do
-        for actionkey, action in pairs(actionbar.actions) do
-            timers[actionbar.val * 12 + action.val] = {}
-            timers[actionbar.val * 12 + action.val][1] = {start = 0, finish = 0, active = false}
+    for book, spells in pairs(self.db.profile.spells) do
+        for key, spell in pairs(spells) do
+            timers[book .. key] = {}
+            timers[book .. key][1] = {start = 0, finish = 0, active = false}
         end
     end
 end
@@ -83,49 +83,24 @@ do
         end
         
         update = 0
-        
-        local classOffset = 0
-        local stance = GetShapeshiftForm(false)
 
-        if (playerClass == "Warrior" or playerClass == "Druid" or playerClass == "Rogue" or playerClass == "Priest") and stance > 0 then
-            classOffset = 5 + stance 
-        end
-    
-        for barkey, actionbar in pairs(RotLatency.db.profile.actionbars) do
-            for actionkey, action in pairs(actionbar.actions) do
-        
-                local row            
-                if actionbar.val == 0 then
-                    row = classOffset + actionbar.val
-                else
-                    row = actionbar.val
-                end
+        for book, spells in pairs(RotLatency.db.profile.spells) do
+            for key, spell in pairs(spells) do
+                local start, dur, enabled = GetSpellCooldown(spell.id, book)
+                local name = book .. key
                 
-                local start, dur, enable = 0, 0, 0
-                local typ, id, subType, globalID = GetActionInfo(row * 12 + action.val + 1)
-                if typ == "spell" then 
-                    start, dur, enabled = GetSpellCooldown(id, BOOKTYPE_SPELL)
-                elseif typ == "macro" then
+                local count = #timers[name]
                 
-                elseif typ == "item" then
-                    start, dur, enabled = GetItemCooldown(id)
-                end
-                
-                local n = actionbar.val * 12 + action.val
-                
-                local count = #timers[n]
-                
-                if start ~= 0 and count > 0 and not timers[n][count].active then
-                    RotLatency:Print("1 element: " .. row * 12 + action.val + 1)
-                    RotLatency:Print("bar: " .. actionbar.name .. ", action: " .. action.name .. ", active -- start: " .. start ..", dur " .. dur .. ", count " .. count)
-                    timers[n][count + 1] = {}
-                    timers[n][count + 1].active = true
-                    timers[n][count + 1].start = GetTime()
-                elseif start == 0 and count > 0 and timers[n][count].active then
-                    RotLatency:Print("2 element: " .. row * 12 + action.val + 1)
-                    RotLatency:Print(actionbar.name .. ", inactive")
-                    timers[n][count].active = false
-                    timers[n][count].finish = GetTime()
+                if start ~= 0 and count > 0 and not timers[name][count].active then
+                    if count == 1 then
+                        timers[name][1].finish = start
+                    end
+                    timers[name][count + 1] = {}
+                    timers[name][count + 1].active = true
+                    timers[name][count + 1].start = start
+                elseif start == 0 and count > 0 and timers[name][count].active then
+                    timers[name][count].active = false
+                    timers[name][count].finish = GetTime()
                 end
             end
         end
@@ -136,97 +111,86 @@ function RotLatency.OnTooltip(tooltip)
     tooltip:ClearLines()
     tooltip:AddDoubleLine("Action Latencies")
     local latencyTotal = 0
-    local count = 0
-    for barkey, actionbar in pairs(RotLatency.db.profile.actionbars) do
-        for actionkey, action in pairs(actionbar.actions) do
-            local n = actionbar.val * 12 + action.val
-            local num = #timers[n]
+    count = 0
+    
+    for book, spells in pairs(RotLatency.db.profile.spells) do
+        for key, spell in pairs(spells) do
+            local name = book .. key            
+            local num = #timers[name]            
             local val = 0
+
             if num > 2 then
-                for i = 0, num do
-                    val = val + timers[n][num - 1].start - timers[n][num - 2].finish
+                for i = 1, num - 1 do
+                    val = val + timers[name][i + 1].start - timers[name][i].finish
                 end
-                latency = val / num
-                tooltip:AddDoubleLine(action.name .. ": " .. latency .. "ms")
-                latencyTotal = latencyTotal + latency
+                
+                local latency = val / (num - 1)
+                
+                tooltip:AddDoubleLine(spell.name .. ": " .. latency .. "ms")
+                
+                latencyTotal = latencyTotal + latency                
+                
                 count = count + 1
             end
         end
     end
+    
     if count > 0 then
         tooltip:AddDoubleLine("Average: " .. latencyTotal / count .. "ms")
     end
 end
 
 function RotLatency:RebuildOptions()
-    self.options.args.actionbars.args = {}
+    self.options.args.spells.args = {}
     
-    self.options.args.actionbars.args.add = {
-        name = "Add Actionbar",
+    self.options.args.spells.args.add = {
+        name = "Add Spell",
         type = "input",
         set = function(info, v)
-            self.db.profile.actionbars[v] = {name = "Actionbar " .. v, val = tonumber(v) - 1, actions = {}}
-            self:RebuildOptions()
+            for book, spells in pairs(self.db.profile.spells) do
+                for i = 1, 500, 1 do
+                    local name = GetSpellName(i, book)
+                    if name == v then
+                        self.db.profile.spells[book][name] = {name = "Spell " .. v, id = i}
+                        self:RebuildOptions()
+                    end
+                end
+            end
         end,
-        pattern = "%d",
-        usage = "Requires a numeric value representing the numbered action bar.",
+        --usage = "Enter the spell's name.",
+        --[[validate = function(v) 
+            for book, spells in pairs(self.db.profile.spells) do
+                for i = 1, 500, 1 do
+                    local name = GetSpellName(i, book)
+                    if name == v then
+                        self:Print("Success " .. name)
+                        return true
+                    end
+                end
+            end
+            return "No such spell exists in your spell book."
+        end,]]
         order = 1
     }
     
-    self:Print(self.db.profile.actionbars["1"])
-    for actionbarkey, actionbar in pairs(self.db.profile.actionbars) do
-        self:Print("test " .. actionbar.name .. ": " .. actionbarkey)
-        self.options.args.actionbars.args[actionbarkey] = {
-            name = actionbar.name,
-            type = "group",
-            args = {
-                add = {
-                    name = "Add Action",
-                    type = "input",
-                    set = function(info, v)
-                        self.db.profile.actionbars[actionbarkey].actions[v] = {val = tonumber(v) - 1, name = v}
-                        self:RebuildOptions()
-                    end,
-                    pattern = "%d",
-                    usage = "Requires a numeric value representing the action bar's action element -- 1 through 12 are valid.",
-                    order = 1
-                },
-                delete = {
-                    name = "Delete Actionbar",
-                    type = "execute",
-                    func = function()
-                        self.db.profile.actionbars[actionbarkey] = nil
-                        self:RebuildOptions()
-                    end
-                }
-            }
-        }
-        for actionkey, action in pairs(actionbar.actions) do
-            self:Print("Action " .. actionkey)
-            self.options.args.actionbars.args[actionbarkey].args[actionkey] = {
+    for book, spells in pairs(self.db.profile.spells) do
+        for key, spell in pairs(spells) do
+            self.options.args.spells.args[key] = {
+                name = spell.name,
                 type = "group",
-                name = "Action " .. action.name,
                 args = {
-                    name = {
-                        type = "input",
-                        name = "Action Name",
-                        set = function(info, v)
-                            self.db.profile.actionbars[actionbarkey].actions[actionkey].name = v
-                            self:RebuildOptions()
-                        end,
-                        order = 1
-                    },
                     delete = {
+                        name = "Delete " .. spell.name,
                         type = "execute",
-                        name = "Delete Action",
                         func = function() 
-                            self.db.profile.actionbars[actionkey].actions[actionkey] = nil
-                            self:RebuildOptions() 
+                            self.db.profile.spells[book][key] = nil
+                            self:RebuildOptions()
                         end
                     }
                 }
             }
         end
     end
+    
     self:ResetTimers()
 end 
