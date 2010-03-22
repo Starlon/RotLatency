@@ -35,18 +35,25 @@ function RotLatency:OnInitialize()
 	}
 	
 	LibStub("AceConfig-3.0"):RegisterOptionsTable("RotLatency", self.options)
-	if InterfaceOptionsFrame:IsResizable() then
-		AceConfigDialog:AddToBlizOptions("RotLatency")
-	end
+	
+	AceConfigDialog:AddToBlizOptions("RotLatency")
+    
 	self:RegisterChatCommand("rotlatency", "OpenConfig")
 
     RotLatency.TT = CreateFrame("GameTooltip")
     RotLatency.TT:SetOwner(UIParent, "ANCHOR_NONE")
     RotLatency.obj = ldb:NewDataObject("RotLatency", {text = "RotLatency",})
     RotLatency.obj.OnTooltipShow = RotLatency.OnTooltip
+    RotLatency.obj.OnClick = RotLatency.OnClick
     
     self:RebuildOptions()
 end
+
+function RotLatency:OpenConfig()
+	AceConfigDialog:SetDefaultSize("RotLatency", 500, 450)
+	AceConfigDialog:Open("RotLatency")
+end
+
 
 function RotLatency:ResetTimers() 
     timers = {}
@@ -126,7 +133,7 @@ function RotLatency.OnTooltip(tooltip)
                 
                 local latency = val / (num - 1)
                 
-                tooltip:AddDoubleLine(spell.name .. ": " .. latency .. "ms")
+                tooltip:AddDoubleLine(spell.name .. ": " .. string.format("%.2f",  latency * 10))
                 
                 latencyTotal = latencyTotal + latency                
                 
@@ -136,8 +143,19 @@ function RotLatency.OnTooltip(tooltip)
     end
     
     if count > 0 then
-        tooltip:AddDoubleLine("Average: " .. latencyTotal / count .. "ms")
+        tooltip:AddDoubleLine("Average: " .. string.format("%.2f", latencyTotal / count * 10))
     end
+    
+    tooltip:AddDoubleLine("")
+    tooltip:AddDoubleLine("Click to configure. Shift-Click to clear data.")
+end
+
+function RotLatency.OnClick()
+    if IsShiftKeyDown() then
+        RotLatency:ResetTimers()
+        return
+    end
+    RotLatency:OpenConfig()
 end
 
 function RotLatency:RebuildOptions()
