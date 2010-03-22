@@ -101,7 +101,15 @@ do
                     row = actionbar.val
                 end
                 
-                local start, dur, enable = GetActionCooldown(row * 12 + action.val + 1)
+                local start, dur, enable = 0, 0, 0
+                local typ, id, subType, globalID = GetActionInfo(row * 12 + action.val + 1)
+                if typ == "spell" then 
+                    start, dur, enabled = GetSpellCooldown(id, BOOKTYPE_SPELL)
+                elseif typ == "macro" then
+                
+                elseif typ == "item" then
+                    start, dur, enabled = GetItemCooldown(id)
+                end
                 
                 local n = actionbar.val * 12 + action.val
                 
@@ -134,9 +142,9 @@ function RotLatency.OnTooltip(tooltip)
             local n = actionbar.val * 12 + action.val
             local num = #timers[n]
             local val = 0
-            if num > 3 then
+            if num > 2 then
                 for i = 0, num do
-                    val = val + timers[n][#timers[n] - 1].start - timers[n][#timers[n] - 2].finish
+                    val = val + timers[n][num - 1].start - timers[n][num - 2].finish
                 end
                 latency = val / num
                 tooltip:AddDoubleLine(action.name .. ": " .. latency .. "ms")
