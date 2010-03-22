@@ -133,7 +133,7 @@ function RotLatency.OnTooltip(tooltip)
                 
                 local latency = val / (num - 1)
                 
-                tooltip:AddDoubleLine(spell.name .. ": " .. string.format("%.2f",  latency * 10))
+                tooltip:AddDoubleLine(spell.name .. ": " .. string.format("%.2f",  latency * 100) .. "ms")
                 
                 latencyTotal = latencyTotal + latency                
                 
@@ -143,7 +143,7 @@ function RotLatency.OnTooltip(tooltip)
     end
     
     if count > 0 then
-        tooltip:AddDoubleLine("Average: " .. string.format("%.2f", latencyTotal / count * 10))
+        tooltip:AddDoubleLine("Average: " .. string.format("%.2f", latencyTotal / count * 100) .. "ms")
     end
     
     tooltip:AddDoubleLine("")
