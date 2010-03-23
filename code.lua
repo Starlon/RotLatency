@@ -19,13 +19,36 @@ function RotLatency:OnInitialize()
 	
 	self.db:RegisterDefaults({
 		profile = {
-            spells = { [BOOKTYPE_SPELL] = { }, [BOOKTYPE_PET] = { }, }
+            spells = { [BOOKTYPE_SPELL] = { }, [BOOKTYPE_PET] = { } },
+            gcd = 0
 		}
 	})
         	
 	self.options = {
 		type = "group",
 		args = {
+            gcd = {
+                type = "input",
+                name = "Spell to track GCD",
+                set = function(info, v)
+                    for book, _ in pairs(self.db.profile.spells) do
+                        for i = 1, 500 do
+                            local name = GetSpellName(i, book)
+                            if name == v then
+                                self.db.profile.gcd = i
+                            end
+                        end
+                    end
+                end,
+                get = function()
+                    for book, _ in pairs(self.db.profile.spells) do
+                        local name = GetSpellName(self.db.profile.gcd, book)
+                        if name then
+                            return name
+                        end
+                    end
+                end
+            },
 			spells = {
                 type = "group",
                 name = "Spells to Track",
@@ -58,12 +81,12 @@ end
 
 function RotLatency:ResetTimers() 
     timers = {}
-    for book, spells in pairs(self.db.profile.spells) do
-        for key, spell in pairs(spells) do
-            timers[book .. key] = {}
-            timers[book .. key][1] = {start = 0, finish = 0, active = false}
-        end
-    end
+end
+
+function RotLatency:GetGCD()
+    if self.db.profile.gcd == "" then return end
+    
+    
 end
 
 function RotLatency:OpenConfig()
@@ -96,38 +119,54 @@ do
         
         update = 0
 
+        local gcdStart, gcdDur, gcdEnabled
+        
+        for book, _ in pairs(RotLatency.db.profile.spells) do 
+            gcdStart, gcdDur, gcdEnabled = GetSpellCooldown(RotLatency.db.profile.gcd, book)
+            if gcdStart ~= 0 then
+                break
+            end
+        end
+        
+        if gcdStart == nil then
+            return
+        end
+        
         for book, spells in pairs(RotLatency.db.profile.spells) do
             for key, spell in pairs(spells) do
                 local start, dur, enabled = GetSpellCooldown(spell.id, book)
+
                 local name = book .. key
+                
+                if not timers[name] then
+                    timers[name] = {}
+                    timers[name][0] = {active=false, start=0, finish=0}
+                end
                 
                 local count = #timers[name]
                 
                 local timer = timers[name][count]
-                
-                if start ~= 0 and count > 0 and not timer.active then
-                    if count == 1 then
-                        timers[name][1].finish = start
-                    end
+                                
+                if start ~= 0 and not timer.active then
+                    RotLatency:Print(name .. " active start " .. start .. ", dur " .. dur .. ", enabled" .. enabled)
                     timers[name][count + 1] = {}
                     timers[name][count + 1].active = true
-                    timers[name][count + 1].start = start
+                    timers[name][count + 1].start = GetTime()
+                    timers[name][count + 1].gcd = gcdDur
                     
-                    if dur == 1.5 then
-                        timers[name][count + 1].gcd = true
+                elseif start == 0 and count > 0 and timer.active then
+                    RotLatency:Print(name .. " inactive start " .. start .. ", dur " .. dur .. ", enabled" .. enabled)
+                    timer.active = false
+                    timer.finish = GetTime() 
+                    local delta = timer.finish - timer.start - .5
+                    RotLatency:Print(name .. " delta " .. delta .. ", gcd " .. timer.gcd)
+                    if delta < timer.gcd and spell.gcd then
+                        RotLatency:Print("Removing this one")
+                        timers[name][count] = nil
                     end
-                    
-                elseif start == 0 and count > 0 and timer.active and spell.gcd and timer.gcd then
-                    timer.active = false
-                    timer.finish = GetTime()
-                elseif start == 0 and count > 0 and timer.active and not spell.gcd then
-                    timer.active = false
-                    timer.finish = GetTime()
-                elseif start == 0 and count > 0 and timer.active and timer.gcd then
-                    timers[name][count] = nil
                 end
             end
-        end
+        end            
     end
 end
 
@@ -135,20 +174,24 @@ function RotLatency.OnTooltip(tooltip)
     tooltip:ClearLines()
     tooltip:AddDoubleLine("Action Latencies")
     local latencyTotal = 0
-    count = 0
+    local count = 0
     
     for book, spells in pairs(RotLatency.db.profile.spells) do
         for key, spell in pairs(spells) do
             local name = book .. key            
-            local num = #timers[name]            
+            local num = 0
             local val = 0
-
+            
+            if timers[name] then
+                num = #timers[name]
+            end
+            
             if num > 2 then
-                for i = 1, num - 1 do
-                    val = val + timers[name][i + 1].start - timers[name][i].finish
+                for i = 2, num, 1 do
+                    val = val + timers[name][i].start - timers[name][i - 1].finish
                 end
                 
-                local latency = val / (num - 1)
+                local latency = val / num
                 
                 tooltip:AddDoubleLine(spell.name .. ": " .. string.format("%.2f",  latency * 100) .. "ms")
                 
