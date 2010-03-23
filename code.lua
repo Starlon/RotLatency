@@ -7,7 +7,7 @@ local timers = {}
 
 frame:SetScript("OnEvent", ldb.OnEvent)
 
-_G.RotLatency = LibStub("AceAddon-3.0"):NewAddon("RotLatency", "AceEvent-3.0", "AceTimer-3.0", "AceConsole-3.0", "AceHook-3.0")
+_G.RotLatency = LibStub("AceAddon-3.0"):NewAddon("RotLatency", "AceEvent-3.0", "AceConsole-3.0")
 local RotLatency = _G.RotLatency
 
 RotLatency.TT = CreateFrame("GameTooltip")
@@ -88,7 +88,7 @@ function RotLatency:OnInitialize()
 
     self.TT = CreateFrame("GameTooltip")
     self.TT:SetOwner(UIParent, "ANCHOR_NONE")
-    self.obj = ldb:NewDataObject("RotLatency", {text = "RotLatency",})
+    self.obj = ldb:NewDataObject("RotLatency", {type = "data source", text = "RotLatency",})
     self.obj.OnTooltipShow = RotLatency.OnTooltip
     self.obj.OnClick = RotLatency.OnClick
     
