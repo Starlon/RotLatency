@@ -262,8 +262,9 @@ function RotLatency:RebuildOptions()
             for book, spells in pairs(self.db.profile.spells) do
                 for i = 1, 500, 1 do
                     local name = GetSpellName(i, book)
+                    local key = name.gsub(" ", "_")
                     if name == v then
-                        self.db.profile.spells[book][name] = {name = v, id = i, gcd=false}
+                        self.db.profile.spells[book][key] = {name = v, id = i, gcd=false}
                         self:RebuildOptions()
                     end
                 end
