@@ -25,7 +25,7 @@ function RotLatency:OnInitialize()
             gap = 10
 		}
 	})
-        	
+    
 	self.options = {
 		type = "group",
 		args = {
@@ -43,6 +43,9 @@ function RotLatency:OnInitialize()
                     end
                 end,
                 get = function()
+                    if self.db.profile.gcd == 0 then
+                        return ""
+                    end
                     for book, _ in pairs(self.db.profile.spells) do
                         local name = GetSpellName(self.db.profile.gcd, book)
                         if name then
@@ -141,6 +144,10 @@ do
         local now = GetTime()
 
         local gcdStart, gcdDur, gcdEnabled
+        
+        if RotLatency.db.profile.gcd == 0 then
+            return
+        end
         
         for book, _ in pairs(RotLatency.db.profile.spells) do 
             gcdStart, gcdDur, gcdEnabled = GetSpellCooldown(RotLatency.db.profile.gcd, book)
@@ -262,8 +269,8 @@ function RotLatency:RebuildOptions()
             for book, spells in pairs(self.db.profile.spells) do
                 for i = 1, 500, 1 do
                     local name = GetSpellName(i, book)
-                    local key = name.gsub(" ", "_")
                     if name == v then
+                        local key = name.gsub(" ", "_")
                         self.db.profile.spells[book][key] = {name = v, id = i, gcd=false}
                         self:RebuildOptions()
                     end
