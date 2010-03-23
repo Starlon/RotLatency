@@ -1,4 +1,5 @@
-﻿local ldb = LibStub:GetLibrary("LibDataBroker-1.1")
+﻿local L = LibStub("AceLocale-3.0"):GetLocale("RotLatency")
+local ldb = LibStub:GetLibrary("LibDataBroker-1.1")
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 
 local frame = CreateFrame("frame")
@@ -30,7 +31,7 @@ function RotLatency:OnInitialize()
 		args = {
             gcd = {
                 type = "input",
-                name = "GCD Spell",
+                name = L["GCD Spell"],
                 set = function(info, v)
                     for book, _ in pairs(self.db.profile.spells) do
                         for i = 1, 500 do
@@ -49,7 +50,7 @@ function RotLatency:OnInitialize()
                         end
                     end
                 end,
-                usage = "RotLatency will use this spell to track global cooldown. It should be a spell on the GCD, but does not have a cooldown of its own.",
+                usage = L["RotLatency will use this spell to track global cooldown. It should be a spell on the GCD, but does not have a cooldown of its own."],
                 order = 1
             },
             newLine = {
@@ -59,7 +60,7 @@ function RotLatency:OnInitialize()
             },
             gap = {
                 type = "input",
-                name = "Time Gap",
+                name = L["Time Gap"],
                 set = function(info, v)
                     self.db.profile.gap = tonumber(v)
                 end,
@@ -67,12 +68,12 @@ function RotLatency:OnInitialize()
                     return tostring(self.db.profile.gap)
                 end,
                 pattern = "%d",
-                usage = "Enter the value in seconds for which to give up waiting for the next spell cast.",
+                usage = L["Enter the value in seconds for which to give up waiting for the next spell cast."],
                 order = 3
             },
 			spells = {
                 type = "group",
-                name = "Spells to Track",
+                name = L["Spells to Track"],
                 args = {},
                 order = 4
             }
@@ -105,12 +106,6 @@ function RotLatency:ResetTimers()
     timers = {}
 end
 
-function RotLatency:GetGCD()
-    if self.db.profile.gcd == "" then return end
-    
-    
-end
-
 function RotLatency:OpenConfig()
 	AceConfigDialog:SetDefaultSize("RotLatency", 500, 450)
 	AceConfigDialog:Open("RotLatency")
@@ -124,6 +119,7 @@ function RotLatency:OnDisable()
     frame:SetScript("OnUpdate", nil)
 end
 
+-- This event is inconsistent
 function RotLatency:SPELL_UPDATE_COOLDOWN()
 
 end
@@ -185,15 +181,14 @@ do
                     timer.hasGap = true
                 end
             
-                if start ~= 0 and enabled == 1 and not timer.active and not spell.gcd then
+            
+                if start ~= 0 and enabled == 1 and not timer.active then
                     timers[name][count + 1] = {}
                     timers[name][count + 1].active = true
                     timers[name][count + 1].start = now
                     timers[name][count + 1].gcd = gcdDur
                     if timer.hasGap then
-                        RotLatency:Print("hasGap " .. count)
                         timer.finish = now
-                        RotLatency:Print("hasGap #2 " .. name)
                         timer.hasGap = false
                     end
                 elseif start == 0 and enabled == 1 and count > 0 and timer.active then
@@ -211,7 +206,7 @@ end
 
 function RotLatency.OnTooltip(tooltip)
     tooltip:ClearLines()
-    tooltip:AddDoubleLine("Action Latencies")
+    tooltip:AddDoubleLine(L["Action Latencies"])
     local latencyTotal = 0
     local count = 0
     
@@ -232,7 +227,7 @@ function RotLatency.OnTooltip(tooltip)
                 
                 local latency = val / num
                 
-                tooltip:AddDoubleLine(spell.name .. ": " .. string.format("%.2f",  latency * 100) .. "ms")
+                tooltip:AddDoubleLine(spell.name .. ": " .. string.format("%.2f",  latency * 100) .. L["ms"])
                 
                 latencyTotal = latencyTotal + latency                
                 
@@ -242,11 +237,11 @@ function RotLatency.OnTooltip(tooltip)
     end
     
     if count > 0 then
-        tooltip:AddDoubleLine("Average: " .. string.format("%.2f", latencyTotal / count * 100) .. "ms")
+        tooltip:AddDoubleLine(L["Average: "] .. string.format("%.2f", latencyTotal / count * 100) .. "ms")
     end
     
     tooltip:AddDoubleLine("")
-    tooltip:AddDoubleLine("Click to configure. Shift-Click to clear data.")
+    tooltip:AddDoubleLine(L["Click to configure. Shift-Click to clear data."])
 end
 
 function RotLatency.OnClick()
@@ -261,31 +256,30 @@ function RotLatency:RebuildOptions()
     self.options.args.spells.args = {}
     
     self.options.args.spells.args.add = {
-        name = "Add Spell",
+        name = L["Add Spell"],
         type = "input",
         set = function(info, v)
             for book, spells in pairs(self.db.profile.spells) do
                 for i = 1, 500, 1 do
                     local name = GetSpellName(i, book)
                     if name == v then
-                        self.db.profile.spells[book][name] = {name = "Spell " .. v, id = i, gcd=false}
+                        self.db.profile.spells[book][name] = {name = v, id = i, gcd=false}
                         self:RebuildOptions()
                     end
                 end
             end
         end,
-        usage = "Enter the spell's name.",
+        usage = L["Enter the spell's name."],
         validate = function(info, v) 
             for book, spells in pairs(self.db.profile.spells) do
                 for i = 1, 500, 1 do
                     local name = GetSpellName(i, book)
                     if name == v then
-                        self:Print("Success " .. name)
                         return true
                     end
                 end
             end
-            return "No such spell exists in your spell book."
+            return L["No such spell exists in your spell book."]
         end,
         order = 1
     }
@@ -297,7 +291,7 @@ function RotLatency:RebuildOptions()
                 type = "group",
                 args = {
                     gcd = {
-                        name = "Track GCD",
+                        name = L["Track GCD"],
                         type = "toggle",
                         set = function(info, v) 
                             self.db.profile.spells[book][key].gcd = v
@@ -313,7 +307,7 @@ function RotLatency:RebuildOptions()
                         order = 2
                     },
                     delete = {
-                        name = "Delete " .. spell.name,
+                        name = L["Delete "] .. spell.name,
                         type = "execute",
                         func = function() 
                             self.db.profile.spells[book][key] = nil
