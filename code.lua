@@ -53,6 +53,17 @@ function RotLatency:OnInitialize()
                         end
                     end
                 end,
+                validate = function(info, v) 
+                    for book, spells in pairs(self.db.profile.spells) do
+                        for i = 1, 500, 1 do
+                            local name = GetSpellName(i, book)
+                            if name == v then
+                                return true
+                            end
+                        end
+                    end
+                    return L["No such spell exists in your spell book."]
+                end,                
                 usage = L["RotLatency will use this spell to track global cooldown. It should be a spell on the GCD, but does not have a cooldown of its own."],
                 order = 1
             },
@@ -270,7 +281,9 @@ function RotLatency:RebuildOptions()
                 for i = 1, 500, 1 do
                     local name = GetSpellName(i, book)
                     if name == v then
-                        local key = name.gsub(" ", "_")
+                        local key = string.gsub(name, " ", "_")
+                        self:Print("key " .. key)
+                        key = name
                         self.db.profile.spells[book][key] = {name = v, id = i, gcd=false}
                         self:RebuildOptions()
                     end
