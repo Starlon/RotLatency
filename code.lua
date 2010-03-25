@@ -140,13 +140,13 @@ end
 
 do
     local update = 0
-    local gcd = {start = 0, finished = 0, active = false}
+    local gcd = {start = 0, finish = 0, active = false}
     
     function RotLatency.OnUpdate(_, elapsed)
         
         update = update + elapsed
         
-        if update < .1 then
+        if update < .01 then
             return
         end
         
@@ -173,10 +173,9 @@ do
         
         if gcdStart ~= 0 and gcdEnabled == 1 and not gcd.active then
             gcd.start = now
-            gcd.finished = now
             gcd.active = true
         elseif gcdStart == 0 and gcdEnabled == 1 and gcd.active then
-            gcd.finished = now
+            gcd.finish = now
             gcd.active = false
         end
         
@@ -195,11 +194,10 @@ do
                 
                 local timer = timers[name][count]
             
-                if gcd.finished < now - RotLatency.db.profile.gap and count > 1 and not timer.hasGap then
+                if gcd.finish < now - RotLatency.db.profile.gap and count > 1 and not timer.hasGap then
                     timer.hasGap = true
                 end
-            
-            
+                        
                 if start ~= 0 and enabled == 1 and not timer.active then
                     timers[name][count + 1] = {}
                     timers[name][count + 1].active = true
@@ -209,13 +207,21 @@ do
                         timer.finish = now
                         timer.hasGap = false
                     end
+                    if timer.elapse and count > 0 then
+                        timer.finish = gcd.finish
+                        timer.elapse = false
+                    end                    
                 elseif start == 0 and enabled == 1 and count > 0 and timer.active then
                     timer.active = false
                     timer.finish = now
                     local delta = timer.finish - timer.start - .5
+                    RotLatency:Print(name .. ": delta " .. delta.. " gcd " .. timer.gcd)
                     if delta < timer.gcd and not spell.gcd then
                         timers[name][count] = nil
                     end
+                    if spell.gcd then
+                        timer.elapse = true
+                    end                    
                 end
             end
         end            
