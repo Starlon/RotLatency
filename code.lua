@@ -21,53 +21,54 @@ function RotLatency:OnInitialize()
 	
 	self.db:RegisterDefaults({
 		profile = {
-		spells = { [BOOKTYPE_SPELL] = { }, [BOOKTYPE_PET] = { } },
-		gcd = 0,
-		gap = 10
+			spells = { [BOOKTYPE_SPELL] = { }, [BOOKTYPE_PET] = { } },
+			gcd = 0,
+			gap = 10,
+			limit = 10
 		}
 	})
 	
 	self.options = {
 		type = "group",
 		args = {
-		gcd = {
-		type = "input",
-		name = L["GCD Spell"],
-		set = function(info, v)
-			for book, _ in pairs(self.db.profile.spells) do
-			for i = 1, 500 do
-				local name = GetSpellName(i, book)
-				if name == v then
-				self.db.profile.gcd = i
+			gcd = {
+			type = "input",
+			name = L["GCD Spell"],
+			set = function(info, v)
+				for book, _ in pairs(self.db.profile.spells) do
+					for i = 1, 500 do
+						local name = GetSpellName(i, book)
+						if name == v then
+							self.db.profile.gcd = i
+						end
+					end
 				end
-			end
-			end
-		end,
-		get = function()
-			if self.db.profile.gcd == 0 then
-			return ""
-			end
-			for book, _ in pairs(self.db.profile.spells) do
-			local name = GetSpellName(self.db.profile.gcd, book)
-			if name then
-				return name
-			end
-			end
-		end,
-		validate = function(info, v) 
-			for book, spells in pairs(self.db.profile.spells) do
-			for i = 1, 500, 1 do
-				local name = GetSpellName(i, book)
-				if name == v then
-				return true
+			end,
+			get = function()
+				if self.db.profile.gcd == 0 then
+					return ""
 				end
-			end
-			end
-			return L["No such spell exists in your spell book."]
-		end,		
-		usage = L["RotLatency will use this spell to track global cooldown. It should be a spell on the GCD, but does not have a cooldown of its own."],
-		order = 1
-	},
+				for book, _ in pairs(self.db.profile.spells) do
+					local name = GetSpellName(self.db.profile.gcd, book)
+					if name then
+						return name
+					end
+				end
+			end,
+			validate = function(info, v) 
+				for book, spells in pairs(self.db.profile.spells) do
+					for i = 1, 500, 1 do
+						local name = GetSpellName(i, book)
+						if name == v then
+							return true
+						end
+					end
+				end
+				return L["No such spell exists in your spell book."]
+			end,		
+			usage = L["RotLatency will use this spell to track global cooldown. It should be a spell on the GCD, but does not have a cooldown of its own."],
+			order = 1
+		},
 		newLine = {
 			type = "header",
 			name = "",
@@ -86,12 +87,25 @@ function RotLatency:OnInitialize()
 			usage = L["Enter the value in seconds for which to give up waiting for the next spell cast."],
 			order = 3
 		},
+		limit = {
+			type = "input",
+			name = L["Tooltip Limit"],
+			set = function(info, v)
+				self.db.profile.limit = tonumber(v)
+			end,
+			get = function()
+				return tostring(self.db.profile.limit)
+			end,
+			pattern = "%d",
+			usage = L["Enter how many records back to display in the tooltip."],
+			order = 4
+		},
 		spells = {
 			type = "group",
 			name = L["Spells to Track"],
 			args = {},
-			order = 4
-			}
+			order = 5
+		}
 	}
 	}
 	
@@ -235,33 +249,47 @@ function RotLatency.OnTooltip(tooltip)
 	local count = 0
 	
 	for book, spells in pairs(RotLatency.db.profile.spells) do
-	for key, spell in pairs(spells) do
-		local name = book .. key		
-		local num = 0
-		local val = 0
+		for key, spell in pairs(spells) do
+			local name = book .. key		
+			local num = 0
+			local val = 0
 		
-		if timers[name] then
-		num = #timers[name]
+			if timers[name] then
+				num = #timers[name]
+			end
+		
+			if num > 2 then
+				for i = 2, num, 1 do
+					val = val + timers[name][i].start - timers[name][i - 1].finish
+				end
+		
+				local latency = val / num
+		
+				tooltip:AddDoubleLine(spell.name .. ": " .. string.format("%.2f",  latency * 100) .. L["ms"])
+
+				local firstTimer = 2
+
+				if num - 2 > (RotLatency.db.profile.limit or 10) then
+					for i = 1, (num - 2) - RotLatency.db.profile.limit do
+						firstTimer = firstTimer + 1
+					end
+				end
+
+				for i = firstTimer, num do
+					local latency = timers[name][i].start - timers[name][i - 1].finish
+					tooltip:AddDoubleLine(i .. ": " .. string.format("%2f", latency * 100))
+				end
+		
+		
+				latencyTotal = latencyTotal + latency		
+		
+				count = count + 1
+			end
 		end
-		
-		if num > 2 then
-		for i = 2, num, 1 do
-			val = val + timers[name][i].start - timers[name][i - 1].finish
-		end
-		
-		local latency = val / num
-		
-		tooltip:AddDoubleLine(spell.name .. ": " .. string.format("%.2f",  latency * 100) .. L["ms"])
-		
-		latencyTotal = latencyTotal + latency		
-		
-		count = count + 1
-		end
-	end
 	end
 	
 	if count > 0 then
-	tooltip:AddDoubleLine(L["Average: "] .. string.format("%.2f", latencyTotal / count * 100) .. "ms")
+		tooltip:AddDoubleLine(L["Average: "] .. string.format("%.2f", latencyTotal / count * 100) .. "ms")
 	end
 	
 	tooltip:AddDoubleLine("")

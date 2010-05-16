@@ -16,3 +16,5 @@ L["Enter the spell's name."] = true
 L["No such spell exists in your spell book."] = true
 L["Track GCD"] = true
 L["Delete "] = true
+L["Tooltip Limit"] = true
+L["Enter how many records back to display in the tooltip."] = true
