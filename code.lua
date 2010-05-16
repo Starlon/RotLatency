@@ -263,7 +263,7 @@ function RotLatency.OnTooltip(tooltip)
 					val = val + timers[name][i].start - timers[name][i - 1].finish
 				end
 		
-				local latency = val / num
+				local latency = val / (num - 2)
 		
 				tooltip:AddDoubleLine(spell.name .. ": " .. string.format("%.2f",  latency * 100) .. L["ms"])
 
