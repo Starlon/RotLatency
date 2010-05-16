@@ -67,32 +67,32 @@ function RotLatency:OnInitialize()
 		end,		
 		usage = L["RotLatency will use this spell to track global cooldown. It should be a spell on the GCD, but does not have a cooldown of its own."],
 		order = 1
-		},
+	},
 		newLine = {
-		type = "header",
-		name = "",
-		order = 2
+			type = "header",
+			name = "",
+			order = 2
 		},
 		gap = {
-		type = "input",
-		name = L["Time Gap"],
-		set = function(info, v)
-			self.db.profile.gap = tonumber(v)
-		end,
-		get = function() 
-			return tostring(self.db.profile.gap)
-		end,
-		pattern = "%d",
-		usage = L["Enter the value in seconds for which to give up waiting for the next spell cast."],
-		order = 3
+			type = "input",
+			name = L["Time Gap"],
+			set = function(info, v)
+				self.db.profile.gap = tonumber(v)
+			end,
+			get = function() 
+				return tostring(self.db.profile.gap)
+			end,
+			pattern = "%d",
+			usage = L["Enter the value in seconds for which to give up waiting for the next spell cast."],
+			order = 3
 		},
-			spells = {
-		type = "group",
-		name = L["Spells to Track"],
-		args = {},
-		order = 4
-		}
-		}
+		spells = {
+			type = "group",
+			name = L["Spells to Track"],
+			args = {},
+			order = 4
+			}
+	}
 	}
 	
 	LibStub("AceConfig-3.0"):RegisterOptionsTable("RotLatency", self.options)
