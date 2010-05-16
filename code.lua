@@ -145,84 +145,84 @@ do
 	
 	function RotLatency.OnUpdate(_, elapsed)
 	
-	update = update + elapsed
+		update = update + elapsed
 	
-	if update < .01 then
-		return
-	end
+		if update < .01 then
+			return
+		end
 	
-	update = 0
+		update = 0
 	
-	local now = GetTime()
+		local now = GetTime()
 
-	local gcdStart, gcdDur, gcdEnabled
+		local gcdStart, gcdDur, gcdEnabled
 	
-	if RotLatency.db.profile.gcd == 0 then
-		return
-	end
-	
-	for book, _ in pairs(RotLatency.db.profile.spells) do 
-		gcdStart, gcdDur, gcdEnabled = GetSpellCooldown(RotLatency.db.profile.gcd, book)
-		if gcdStart ~= 0 then
-		break
+		if RotLatency.db.profile.gcd == 0 then
+			return
 		end
-	end
 	
-	if gcdStart == nil then
-		return
-	end
+		for book, _ in pairs(RotLatency.db.profile.spells) do 
+			gcdStart, gcdDur, gcdEnabled = GetSpellCooldown(RotLatency.db.profile.gcd, book)
+			if gcdStart ~= 0 then
+				break
+			end
+		end
 	
-	if gcdStart ~= 0 and gcdEnabled == 1 and not gcd.active then
-		gcd.start = now
-		gcd.active = true
-	elseif gcdStart == 0 and gcdEnabled == 1 and gcd.active then
-		gcd.finish = now
-		gcd.active = false
-	end
+		if gcdStart == nil then
+			return
+		end
 	
-	for book, spells in pairs(RotLatency.db.profile.spells) do
-		for key, spell in pairs(spells) do
-		local start, dur, enabled = GetSpellCooldown(spell.id, book)
+		if gcdStart ~= 0 and gcdEnabled == 1 and not gcd.active then
+			gcd.start = now
+			gcd.active = true
+		elseif gcdStart == 0 and gcdEnabled == 1 and gcd.active then
+			gcd.finish = now
+			gcd.active = false
+		end
+	
+		for book, spells in pairs(RotLatency.db.profile.spells) do
+			for key, spell in pairs(spells) do
+			local start, dur, enabled = GetSpellCooldown(spell.id, book)
 
-		local name = book .. key
+			local name = book .. key
 		
-		if not timers[name] then
-			timers[name] = {}
-			timers[name][0] = {active=false, start=0, finish=0}
-		end
+			if not timers[name] then
+				timers[name] = {}
+				timers[name][0] = {active=false, start=0, finish=0}
+			end
 		
-		local count = #timers[name]
+			local count = #timers[name]
 		
-		local timer = timers[name][count]
+			local timer = timers[name][count]
 		
-		if gcd.finish < now - RotLatency.db.profile.gap and count > 1 and not timer.hasGap then
-			timer.hasGap = true
-		end
+			if gcd.finish < now - RotLatency.db.profile.gap and count > 1 and not timer.hasGap then
+				timer.hasGap = true
+			end
 			
-		if start ~= 0 and enabled == 1 and not timer.active then
-			timers[name][count + 1] = {}
-			timers[name][count + 1].active = true
-			timers[name][count + 1].start = now
-			timers[name][count + 1].gcd = gcdDur
-			if timer.hasGap then
-			timer.finish = now
-			timer.hasGap = false
+			if start ~= 0 and enabled == 1 and not timer.active then
+				timers[name][count + 1] = {}
+				timers[name][count + 1].active = true
+				timers[name][count + 1].start = now
+				timers[name][count + 1].gcd = gcdDur
+				if timer.hasGap then
+					timer.finish = now
+					timer.hasGap = false
+				end
+				if timer.elapse and count > 0 then
+					timer.finish = gcd.finish
+					timer.elapse = false
+				end			
+			elseif start == 0 and enabled == 1 and count > 0 and timer.active then
+				timer.active = false
+				timer.finish = now
+				local delta = timer.finish - timer.start - .5
+				if delta < timer.gcd and not spell.gcd then
+					timers[name][count] = nil
+				end
+				if spell.gcd then
+					timer.elapse = true
+				end			
 			end
-			if timer.elapse and count > 0 then
-			timer.finish = gcd.finish
-			timer.elapse = false
-			end			
-		elseif start == 0 and enabled == 1 and count > 0 and timer.active then
-			timer.active = false
-			timer.finish = now
-			local delta = timer.finish - timer.start - .5
-			if delta < timer.gcd and not spell.gcd then
-			timers[name][count] = nil
-			end
-			if spell.gcd then
-			timer.elapse = true
-			end			
-		end
 		end
 	end		
 	end
