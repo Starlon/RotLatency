@@ -182,49 +182,49 @@ do
 	
 		for book, spells in pairs(RotLatency.db.profile.spells) do
 			for key, spell in pairs(spells) do
-			local start, dur, enabled = GetSpellCooldown(spell.id, book)
+				local start, dur, enabled = GetSpellCooldown(spell.id, book)
 
-			local name = book .. key
+				local name = book .. key
 		
-			if not timers[name] then
-				timers[name] = {}
-				timers[name][0] = {active=false, start=0, finish=0}
-			end
+				if not timers[name] then
+					timers[name] = {}
+					timers[name][0] = {active=false, start=0, finish=0}
+				end
 		
-			local count = #timers[name]
+				local count = #timers[name]
 		
-			local timer = timers[name][count]
+				local timer = timers[name][count]
 		
-			if gcd.finish < now - RotLatency.db.profile.gap and count > 1 and not timer.hasGap then
-				timer.hasGap = true
-			end
+				if gcd.finish < now - RotLatency.db.profile.gap and count > 1 and not timer.hasGap then
+					timer.hasGap = true
+				end
 			
-			if start ~= 0 and enabled == 1 and not timer.active then
-				timers[name][count + 1] = {}
-				timers[name][count + 1].active = true
-				timers[name][count + 1].start = now
-				timers[name][count + 1].gcd = gcdDur
-				if timer.hasGap then
+				if start ~= 0 and enabled == 1 and not timer.active then
+					timers[name][count + 1] = {}
+					timers[name][count + 1].active = true
+					timers[name][count + 1].start = now
+					timers[name][count + 1].gcd = gcdDur
+					if timer.hasGap then
+						timer.finish = now
+						timer.hasGap = false
+					end
+					if timer.elapse and count > 0 then
+						timer.finish = gcd.finish
+						timer.elapse = false
+					end			
+				elseif start == 0 and enabled == 1 and count > 0 and timer.active then
+					timer.active = false
 					timer.finish = now
-					timer.hasGap = false
+					local delta = timer.finish - timer.start - .5
+					if delta < timer.gcd and not spell.gcd then
+						timers[name][count] = nil
+					end
+					if spell.gcd then
+						timer.elapse = true
+					end			
 				end
-				if timer.elapse and count > 0 then
-					timer.finish = gcd.finish
-					timer.elapse = false
-				end			
-			elseif start == 0 and enabled == 1 and count > 0 and timer.active then
-				timer.active = false
-				timer.finish = now
-				local delta = timer.finish - timer.start - .5
-				if delta < timer.gcd and not spell.gcd then
-					timers[name][count] = nil
-				end
-				if spell.gcd then
-					timer.elapse = true
-				end			
 			end
-		end
-	end		
+		end		
 	end
 end
 
