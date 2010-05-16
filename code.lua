@@ -215,7 +215,6 @@ do
                     timer.active = false
                     timer.finish = now
                     local delta = timer.finish - timer.start - .5
-                    RotLatency:Print(name .. ": delta " .. delta.. " gcd " .. timer.gcd)
                     if delta < timer.gcd and not spell.gcd then
                         timers[name][count] = nil
                     end
@@ -288,7 +287,6 @@ function RotLatency:RebuildOptions()
                     local name = GetSpellName(i, book)
                     if name == v then
                         local key = string.gsub(name, " ", "_")
-                        self:Print("key " .. key)
                         key = name
                         self.db.profile.spells[book][key] = {name = v, id = i, gcd=false}
                         self:RebuildOptions()
