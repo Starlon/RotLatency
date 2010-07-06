@@ -1,5 +1,4 @@
-﻿-- TODO: Adaptive beat detection for dealing with massive network latency. Note that this can only be used in
-local L = LibStub("AceLocale-3.0"):GetLocale("RotLatency")
+﻿local L = LibStub("AceLocale-3.0"):GetLocale("RotLatency")
 local ldb = LibStub:GetLibrary("LibDataBroker-1.1")
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 
@@ -89,7 +88,7 @@ function RotLatency:OnInitialize()
 		},
 		limit = {
 			type = "input",
-			name = L["Tooltip Limit"],
+			name = L["Display Limit"],
 			set = function(info, v)
 				self.db.profile.limit = tonumber(v)
 			end,
@@ -97,7 +96,7 @@ function RotLatency:OnInitialize()
 				return tostring(self.db.profile.limit)
 			end,
 			pattern = "%d",
-			usage = L["Enter how many records back to display in the tooltip."],
+			usage = L["Enter how many records back to display."],
 			order = 4
 		},
 		spells = {
@@ -113,7 +112,7 @@ function RotLatency:OnInitialize()
 	
 	AceConfigDialog:AddToBlizOptions("RotLatency")
 	
-	self:RegisterChatCommand("rotlatency", "OpenConfig")
+	self:RegisterChatCommand("rotlatency", "CommandHandler")
 
 	self.TT = CreateFrame("GameTooltip")
 	self.TT:SetOwner(UIParent, "ANCHOR_NONE")
@@ -125,9 +124,16 @@ function RotLatency:OnInitialize()
 	self:RebuildOptions()
 end
 
-function RotLatency:OpenConfig()
-	AceConfigDialog:SetDefaultSize("RotLatency", 500, 450)
-	AceConfigDialog:Open("RotLatency")
+function RotLatency:CommandHandler(command)
+	if not command then
+		self:Print(L["Usage: /rotlatency <command>"])
+		self:Print(L["Where <command> is one of 'config' or 'stats' without quotes."])
+	elseif command == "config" then
+		AceConfigDialog:SetDefaultSize("RotLatency", 500, 450)
+		AceConfigDialog:Open("RotLatency")
+	elseif command == "stats" then
+		self:ShowStats(false)
+	end
 end
 
 
@@ -244,9 +250,22 @@ end
 
 function RotLatency.OnTooltip(tooltip)
 	tooltip:ClearLines()
-	tooltip:AddDoubleLine(L["Action Latencies"])
+
+	RotLatency:ShowStats(true, tooltip)
+	
+	tooltip:AddDoubleLine("")
+	tooltip:AddDoubleLine(L["Click to configure. Shift-Click to clear data."])
+end
+	
+function RotLatency:ShowStats(onTooltip, tooltip)
 	local latencyTotal = 0
 	local count = 0
+
+	if onTooltip then
+		tooltip:AddDoubleLine(L["Action Latencies"])
+	else
+		self:Print(L["Action Latencies"])
+	end
 	
 	for book, spells in pairs(RotLatency.db.profile.spells) do
 		for key, spell in pairs(spells) do
@@ -264,8 +283,13 @@ function RotLatency.OnTooltip(tooltip)
 				end
 		
 				local latency = val / (num - 2)
-		
-				tooltip:AddDoubleLine(spell.name .. ": " .. string.format("%.2f",  latency * 100) .. L["ms"])
+
+				local text = spell.name .. ": " .. string.format("%.2f",  latency * 100) .. L["ms"]
+				if onTooltip then
+					tooltip:AddDoubleLine(text)
+				else
+					self:Print(text)
+				end
 
 				local firstTimer = 2
 
@@ -277,7 +301,12 @@ function RotLatency.OnTooltip(tooltip)
 
 				for i = firstTimer, num do
 					local latency = timers[name][i].start - timers[name][i - 1].finish
-					tooltip:AddDoubleLine(i .. ": " .. string.format("%2f", latency * 100))
+					text = i .. ": " .. string.format("%2f", latency * 100)
+					if onTooltip then
+						tooltip:AddDoubleLine(text)
+					else
+						self:Print(text)
+					end
 				end
 		
 		
@@ -289,11 +318,15 @@ function RotLatency.OnTooltip(tooltip)
 	end
 	
 	if count > 0 then
-		tooltip:AddDoubleLine(L["Average: "] .. string.format("%.2f", latencyTotal / count * 100) .. "ms")
+		text = L["Average: "] .. string.format("%.2f", latencyTotal / count * 100) .. "ms"
+		if onTooltip then
+			tooltip:AddDoubleLine(text)
+		else
+			self:Print(text)
+		end
+	elseif not onTooltip then
+		self:Print(L["Nothing to display"])
 	end
-	
-	tooltip:AddDoubleLine("")
-	tooltip:AddDoubleLine(L["Click to configure. Shift-Click to clear data."])
 end
 
 function RotLatency.OnClick()
