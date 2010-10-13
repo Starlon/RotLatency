@@ -36,7 +36,7 @@ function RotLatency:OnInitialize()
 			set = function(info, v)
 				for book, _ in pairs(self.db.profile.spells) do
 					for i = 1, 500 do
-						local name = GetSpellName(i, book)
+						local name = GetSpellBookItemName(i, book)
 						if name == v then
 							self.db.profile.gcd = i
 						end
@@ -48,7 +48,7 @@ function RotLatency:OnInitialize()
 					return ""
 				end
 				for book, _ in pairs(self.db.profile.spells) do
-					local name = GetSpellName(self.db.profile.gcd, book)
+					local name = GetSpellBookItemName(self.db.profile.gcd, book)
 					if name then
 						return name
 					end
@@ -57,7 +57,7 @@ function RotLatency:OnInitialize()
 			validate = function(info, v) 
 				for book, spells in pairs(self.db.profile.spells) do
 					for i = 1, 500, 1 do
-						local name = GetSpellName(i, book)
+						local name = GetSpellBookItemName(i, book)
 						if name == v then
 							return true
 						end
@@ -167,7 +167,7 @@ do
 	
 		update = update + elapsed
 	
-		if update < .01 then
+		if update < .00001 then
 			return
 		end
 	
@@ -346,7 +346,7 @@ function RotLatency:RebuildOptions()
 	set = function(info, v)
 		for book, spells in pairs(self.db.profile.spells) do
 		for i = 1, 500, 1 do
-			local name = GetSpellName(i, book)
+			local name = GetSpellBookItemName(i, book)
 			if name == v then
 			local key = string.gsub(name, " ", "_")
 			key = name
@@ -360,7 +360,7 @@ function RotLatency:RebuildOptions()
 	validate = function(info, v) 
 		for book, spells in pairs(self.db.profile.spells) do
 		for i = 1, 500, 1 do
-			local name = GetSpellName(i, book)
+			local name = GetSpellBookItemName(i, book)
 			if name == v then
 			return true
 			end
