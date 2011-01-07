@@ -73,19 +73,6 @@ function RotLatency:OnInitialize()
 			name = "",
 			order = 2
 		},
-		gap = {
-			type = "input",
-			name = L["Time Gap"],
-			set = function(info, v)
-				self.db.profile.gap = tonumber(v)
-			end,
-			get = function() 
-				return tostring(self.db.profile.gap)
-			end,
-			pattern = "%d",
-			usage = L["Enter the value in seconds for which to give up waiting for the next spell cast."],
-			order = 3
-		},
 		limit = {
 			type = "input",
 			name = L["Display Limit"],
