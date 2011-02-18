@@ -271,6 +271,7 @@ function RotLatency:ShowStats(onTooltip, tooltip)
 			local name = book .. key		
 			local num = 0
 			local val = 0
+			local trash = 0
 		
 			if timers[name] then
 				num = #timers[name]
@@ -278,10 +279,15 @@ function RotLatency:ShowStats(onTooltip, tooltip)
 		
 			if num > 2 then
 				for i = 2, num, 1 do
-					val = val + timers[name][i].start - timers[name][i - 1].finish
+					local delta = timers[name][i].start - timers[name][i - 1].finish
+					if delta < RotLatency.db.profile.gap then
+						val = val + delta
+					else
+						trash = trash + 1
+					end
 				end
 		
-				local latency = val / (num - 2)
+				local latency = val / (num - 2 - trash)
 
 				local text = spell.name .. ": " .. string.format("%.2f",  latency * 100) .. L["ms"]
 				if onTooltip then
@@ -298,22 +304,24 @@ function RotLatency:ShowStats(onTooltip, tooltip)
 					end
 				end
 
+				trash = 0
 				for i = firstTimer, num do
-					local latency = timers[name][i].start - timers[name][i - 1].finish
-					text = (i - 1) .. ": " .. string.format("%2f", latency * 100)
-					if onTooltip then
-						tooltip:AddDoubleLine(text)
+					local delta = timers[name][i].start - timers[name][i - 1].finish
+					if delta < RotLatency.db.profile.gap then
+						text = (i - 1) .. ": " .. string.format("%2f", delta * 100)
+						if onTooltip then
+							tooltip:AddDoubleLine(text)
+						else
+							self:Print(text)
+						end
 					else
-						self:Print(text)
+						trash = trash + 1
 					end
-				end
-		
-		
-				if latency < RotLatency.db.profile.gap then
-					latencyTotal = latencyTotal + latency		
+				end			
 			
-					count = count + 1
-				end
+				latencyTotal = latencyTotal + latency		
+			
+				count = count + 1
 			end
 		end
 	end
