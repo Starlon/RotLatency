@@ -299,9 +299,7 @@ function RotLatency:ShowStats(onTooltip, tooltip)
 				local firstTimer = 2
 
 				if num - 2 > (RotLatency.db.profile.limit or 10) then
-					for i = 1, (num - 2) - RotLatency.db.profile.limit do
-						firstTimer = firstTimer + 1
-					end
+					firstTimer = num - RotLatency.db.profile.limit
 				end
 
 				trash = 0
