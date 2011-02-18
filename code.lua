@@ -86,6 +86,19 @@ function RotLatency:OnInitialize()
 			usage = L["Enter how many records back to display."],
 			order = 4
 		},
+		gap = {
+			type = "input",
+			name = L["Time Gap"],
+			set = function(info, v)
+				self.db.profile.gap = tonumber(v)
+			end,
+			get = function()
+				return tostring(self.db.profile.gap)
+			end,
+			pattern = "%d",
+			usage = L["Enter the value in seconds for which to give up waiting for the next spell cast."],
+			order = 5
+		},
 		spells = {
 			type = "group",
 			name = L["Spells to Track"],
@@ -287,7 +300,7 @@ function RotLatency:ShowStats(onTooltip, tooltip)
 
 				for i = firstTimer, num do
 					local latency = timers[name][i].start - timers[name][i - 1].finish
-					text = i .. ": " .. string.format("%2f", latency * 100)
+					text = (i - 1) .. ": " .. string.format("%2f", latency * 100)
 					if onTooltip then
 						tooltip:AddDoubleLine(text)
 					else
@@ -296,9 +309,11 @@ function RotLatency:ShowStats(onTooltip, tooltip)
 				end
 		
 		
-				latencyTotal = latencyTotal + latency		
-		
-				count = count + 1
+				if latency < RotLatency.db.profile.gap then
+					latencyTotal = latencyTotal + latency		
+			
+					count = count + 1
+				end
 			end
 		end
 	end
