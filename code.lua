@@ -129,7 +129,7 @@ function RotLatency:CommandHandler(command)
 		self:Print(L["Usage: /rotlatency <command>"])
 		self:Print(L["Where <command> is one of 'config' or 'stats' without quotes."])
 	elseif command == "config" then
-		AceConfigDialog:SetDefaultSize("RotLatency", 500, 450)
+		AceConfigDialog:SetDefaultSize("RotLatency", 300, 450)
 		AceConfigDialog:Open("RotLatency")
 	elseif command == "stats" then
 		self:ShowStats(false)
@@ -157,8 +157,11 @@ function RotLatency:OnDisable()
 	self:UnregisterAllEvents()
 end
 
+local toggle = true
 function RotLatency:PLAYER_ENTER_COMBAT()
-	frame:SetScript("OnUpdate", self.OnUpdate)
+	if toggle then
+		frame:SetScript("OnUpdate", self.OnUpdate)
+	end
 end
 
 function RotLatency:PLAYER_LEAVE_COMBAT()
@@ -178,7 +181,7 @@ do
 	
 		update = update + elapsed
 	
-		if update < .1 then
+		if update < .01 then
 			return
 		end
 	
@@ -253,7 +256,8 @@ function RotLatency.OnTooltip(tooltip)
 	RotLatency:ShowStats(true, tooltip)
 	
 	tooltip:AddDoubleLine("")
-	tooltip:AddDoubleLine(L["Click to configure. Shift-Click to clear data."])
+	local toggle = toggle and "on" or "off"
+	tooltip:AddDoubleLine(format(L["Click to configure. Shift-Click to clear data. Ctrl-Click to toggle %s."], toggle))
 end
 	
 function RotLatency:ShowStats(onTooltip, tooltip)
@@ -338,8 +342,13 @@ end
 
 function RotLatency.OnClick()
 	if IsShiftKeyDown() then
-	RotLatency:ResetTimers()
-	return
+		RotLatency:ResetTimers()
+		return
+	end
+	if IsControlKeyDown() then
+		toggle = not toggle
+		RotLatency:Print(format(L["RotLatency is %s."], toggle and "On" or "Off"))
+		return
 	end
 	RotLatency:OpenConfig()
 end
