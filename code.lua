@@ -256,7 +256,7 @@ function RotLatency.OnTooltip(tooltip)
 	RotLatency:ShowStats(true, tooltip)
 	
 	tooltip:AddDoubleLine("")
-	local toggle = toggle and "on" or "off"
+	local toggle = toggle and "off" or "on"
 	tooltip:AddDoubleLine(format(L["Click to configure. Shift-Click to clear data. Ctrl-Click to toggle %s."], toggle))
 end
 	
