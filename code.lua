@@ -65,7 +65,7 @@ function RotLatency:OnInitialize()
 				return L["No such spell exists in your spell book."]
 			end,		
 
-			usage = L["Note that this is mandatory for things to work! RotLatency will use this spell to track global cooldown. It should be a spell on the GCD, but does not have a cooldown of its own. Find Herbs is a good example."] = true
+			usage = L["Note that this is mandatory for things to work! RotLatency will use this spell to track global cooldown. It should be a spell on the GCD, but does not have a cooldown of its own. Find Herbs is a good example."],
 			order = 1
 		},
 		newLine = {

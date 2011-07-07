@@ -5,6 +5,9 @@
 ## OptionalDeps: Ace3
 ## SavedVariables: RotLatencyDB
 
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
+
 embeds.xml
 
 Localization_enUS.lua
