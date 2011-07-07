@@ -3,10 +3,7 @@ local ldb = LibStub:GetLibrary("LibDataBroker-1.1")
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 local LibTimer = LibStub("LibScriptableUtilsTimer-1.0")
 
-local frame = CreateFrame("frame")
 local timers = {}
-
-frame:SetScript("OnEvent", ldb.OnEvent)
 
 _G.RotLatency = LibStub("AceAddon-3.0"):NewAddon("RotLatency", "AceEvent-3.0", "AceConsole-3.0", "LibSink-2.0")
 local RotLatency = _G.RotLatency
@@ -24,7 +21,8 @@ function RotLatency:OnInitialize()
 			spells = { [BOOKTYPE_SPELL] = { }, [BOOKTYPE_PET] = { } },
 			gcd = 0,
 			gap = 10,
-			limit = 10
+			limit = 10,
+			refreshRate = 50
 		}
 	})
 	
@@ -66,7 +64,8 @@ function RotLatency:OnInitialize()
 				end
 				return L["No such spell exists in your spell book."]
 			end,		
-			usage = L["RotLatency will use this spell to track global cooldown. It should be a spell on the GCD, but does not have a cooldown of its own."],
+
+			usage = L["Note that this is mandatory for things to work! RotLatency will use this spell to track global cooldown. It should be a spell on the GCD, but does not have a cooldown of its own. Find Herbs is a good example."] = true
 			order = 1
 		},
 		newLine = {
@@ -100,11 +99,26 @@ function RotLatency:OnInitialize()
 			usage = L["Enter the value in seconds for which to give up waiting for the next spell cast."],
 			order = 5
 		},
+		refreshRate = {
+			type = "input",
+			name = L["Refresh Rate"],
+			usage = L["This determines how fast the cooldowns are examined; the format is in milliseconds."],
+			set = function(info, v)
+				self.db.profile.refreshRate = tonumber(v)
+				self.timer:Stop()
+				self.timer:Del()
+				self.timer = LibTimer:New("RotLatency", self.db.profile.refreshRate, true, RotLatency.OnUpdate)
+			end,
+			get = function() 
+				return tostring(self.db.profile.refreshRate)
+			end,
+			order = 6
+		},
 		spells = {
 			type = "group",
 			name = L["Spells to Track"],
 			args = {},
-			order = 5
+			order = 7
 		}
 	}
 	}
@@ -123,7 +137,7 @@ function RotLatency:OnInitialize()
 	
 	
 	self:RebuildOptions()
-	self.timer = LibTimer:New("RotLatency", 30, true, RotLatency.OnUpdate)
+	self.timer = LibTimer:New("RotLatency", self.db.profile.refreshRate or 50, true, RotLatency.OnUpdate)
 end
 
 function RotLatency:CommandHandler(command)
@@ -152,7 +166,6 @@ function RotLatency:OnEnable()
 end
 
 function RotLatency:OnDisable()
-	frame:SetScript("OnUpdate", nil)
 	self:UnregisterAllEvents()
 end
 
@@ -160,13 +173,11 @@ local toggle = true
 function RotLatency:PLAYER_ENTER_COMBAT()
 	if toggle then
 		self.timer:Start()
-		--frame:SetScript("OnUpdate", self.OnUpdate)
 	end
 end
 
 function RotLatency:PLAYER_LEAVE_COMBAT()
 	self.timer:Stop()
-	frame:SetScript("OnUpdate", nil)
 end
 
 local guid = UnitGUID("player")
