@@ -1,13 +1,14 @@
-﻿local L = LibStub("AceLocale-3.0"):GetLocale("RotLatency")
+local L = LibStub("AceLocale-3.0"):GetLocale("RotLatency")
 local ldb = LibStub:GetLibrary("LibDataBroker-1.1")
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
+local LibTimer = LibStub("LibScriptableUtilsTimer-1.0")
 
 local frame = CreateFrame("frame")
 local timers = {}
 
 frame:SetScript("OnEvent", ldb.OnEvent)
 
-_G.RotLatency = LibStub("AceAddon-3.0"):NewAddon("RotLatency", "AceEvent-3.0", "AceConsole-3.0")
+_G.RotLatency = LibStub("AceAddon-3.0"):NewAddon("RotLatency", "AceEvent-3.0", "AceConsole-3.0", "LibSink-2.0")
 local RotLatency = _G.RotLatency
 
 RotLatency.TT = CreateFrame("GameTooltip")
@@ -122,6 +123,7 @@ function RotLatency:OnInitialize()
 	
 	
 	self:RebuildOptions()
+	self.timer = LibTimer:New("RotLatency", 30, true, RotLatency.OnUpdate)
 end
 
 function RotLatency:CommandHandler(command)
@@ -137,10 +139,6 @@ function RotLatency:CommandHandler(command)
 end
 
 
-function RotLatency:ResetTimers() 
-	timers = {}
-end
-
 function RotLatency:OpenConfig()
 	AceConfigDialog:SetDefaultSize("RotLatency", 500, 450)
 	AceConfigDialog:Open("RotLatency")
@@ -150,6 +148,7 @@ function RotLatency:OnEnable()
 	self:RegisterEvent("SPELL_UPDATE_COOLDOWN")
 	self:RegisterEvent("PLAYER_ENTER_COMBAT")
 	self:RegisterEvent("PLAYER_LEAVE_COMBAT")
+	self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 end
 
 function RotLatency:OnDisable()
@@ -160,12 +159,37 @@ end
 local toggle = true
 function RotLatency:PLAYER_ENTER_COMBAT()
 	if toggle then
-		frame:SetScript("OnUpdate", self.OnUpdate)
+		self.timer:Start()
+		--frame:SetScript("OnUpdate", self.OnUpdate)
 	end
 end
 
 function RotLatency:PLAYER_LEAVE_COMBAT()
+	self.timer:Stop()
 	frame:SetScript("OnUpdate", nil)
+end
+
+local guid = UnitGUID("player")
+function RotLatency:COMBAT_LOG_EVENT_UNFILTERED(_, ...)
+	local timeStamp, event, hideCaster, sourceGUID, sourceName, sourceFlags, _, destGUID, destName, destFlags, _, spellid, spellname = ...
+	if sourceGUID ~= guid then return end
+	if event:find("_DAMAGE") then
+		for book, spells in pairs(RotLatency.db.profile.spells) do
+			for key, spell in pairs(spells) do
+				local skillType, spell_ID = GetSpellBookItemInfo(spell.id, book)
+				if spellid ==  spell_ID and timers[book .. key] then
+					local spellname, rank, icon, cost, isFunnel, powerType, castTime, minRange, maxRange = GetSpellInfo(spell_ID)
+					local i = #timers[book .. key]
+					local timer1 = timers[book .. key][i]
+					local timer2 = timers[book .. key][i - 1]
+					if timer1 and timer2 and timer1.start and timer2.finish and i > 1 then
+						local text = format("%s: %dms", spellname, (timer1.start - timer2.finish) * 100)
+						self:Pour(text, spell.r or 1, spell.g or .5, spell.b or 1, font, size, outline, sticky, location, icon)
+					end
+				end
+			end
+		end
+	end
 end
 
 -- This event is inconsistent
@@ -174,18 +198,9 @@ function RotLatency:SPELL_UPDATE_COOLDOWN()
 end
 
 do
-	local update = 0
 	local gcd = {start = 0, finish = 0, active = false}
 	
 	function RotLatency.OnUpdate(_, elapsed)
-	
-		update = update + elapsed
-	
-		if update < .01 then
-			return
-		end
-	
-		update = 0
 	
 		local now = GetTime()
 
@@ -222,7 +237,7 @@ do
 		
 				if not timers[name] then
 					timers[name] = {}
-					timers[name][0] = {active=false, start=0, finish=0}
+					timers[name][0] = {active=false, start=0, finish=0, name = name, icon = icon}
 				end
 		
 				local count = #timers[name]
@@ -234,6 +249,8 @@ do
 					timers[name][count + 1].active = true
 					timers[name][count + 1].start = now
 					timers[name][count + 1].gcd = gcdDur
+					timers[name][count + 1].name = spellName
+					timers[name][count + 1].icon = icon
 					if timer.elapse and count > 0 then
 						timer.finish = gcd.finish
 						timer.elapse = false
@@ -260,6 +277,9 @@ function RotLatency.OnTooltip(tooltip)
 	tooltip:AddDoubleLine(format(L["Click to configure. Shift-Click to clear data. Ctrl-Click to toggle %s."], toggle))
 end
 	
+function RotLatency:PourTimer(timer)
+end
+
 function RotLatency:ShowStats(onTooltip, tooltip)
 	local latencyTotal = 0
 	local count = 0
@@ -338,6 +358,10 @@ function RotLatency:ShowStats(onTooltip, tooltip)
 	elseif not onTooltip then
 		self:Print(L["Nothing to display"])
 	end
+end
+
+function RotLatency:ResetTimers() 
+	timers = {}
 end
 
 function RotLatency.OnClick()

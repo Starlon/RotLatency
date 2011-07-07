@@ -9,7 +9,8 @@
 <Script file="Libs\AceLocale-3.0\AceLocale-3.0.lua"/>
 <Include file="Libs\AceGUI-3.0\AceGUI-3.0.xml"/>
 <Include file="Libs\AceConfig-3.0\AceConfig-3.0.xml"/>
-<Script file="Libs\AceLibrary\AceLibrary.lua"/>
 <Script file="Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua"/>
+<Script file="Libs\LibSink-2.0\LibSink-2.0\LibSink-2.0.lua"/>
+<Script file="Libs\LibScriptableUtilsTimer-1.0\LibScriptableUtilsTimer-1.0.lua">
 
 </Ui>
